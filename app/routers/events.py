@@ -9,6 +9,37 @@ from ..schemas import Event as EventSchema
 from ..schemas import EventCreate, EventUpdate
 
 
+
+def filter_events_by_location(events, location):
+    """Return events whose location contains the search text."""
+    search_text = location.casefold()
+
+    return [
+        event
+        for event in events
+        if search_text in (
+            event["location"]
+            if isinstance(event, dict)
+            else event.location
+        ).casefold()
+    ]
+
+
+def filter_events_by_title(events, title):
+    """Return events whose title contains the search text."""
+    search_text = title.casefold()
+
+    return [
+        event
+        for event in events
+        if search_text in (
+            event["title"]
+            if isinstance(event, dict)
+            else event.title
+        ).casefold()
+    ]
+
+
 router = APIRouter(
     prefix="/events",
     tags=["Events"]
