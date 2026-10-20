@@ -1,7 +1,15 @@
 
 import pytest
+from fastapi import HTTPException
 from pydantic import ValidationError
 
+from app.models import Participant
+from app.routers.participants import (
+    create_participant,
+    delete_participant,
+    get_participant,
+    list_participants,
+)
 from app.schemas import ParticipantCreate
 from app.services import (
     has_available_capacity,
@@ -68,3 +76,58 @@ def test_duplicate_registration_rejected():
 
     with pytest.raises(ValueError):
         check_duplicate_registration(registered_ids, 2)
+
+
+# =========================================
+# ROUTER BRANCH COVERAGE
+# =========================================
+
+
+def test_create_participant_success(db_session):
+    data = ParticipantCreate(name="Ahmed", email="ahmed@example.com")
+
+    created = create_participant(data, db_session)
+
+    assert created.id is not None
+    assert created.email == "ahmed@example.com"
+
+
+def test_create_participant_duplicate_email_rejected(db_session):
+    data = ParticipantCreate(name="Ahmed", email="ahmed@example.com")
+    create_participant(data, db_session)
+
+    with pytest.raises(HTTPException) as exc_info:
+        create_participant(data, db_session)
+
+    assert exc_info.value.status_code == 409
+    assert exc_info.value.detail == "Email is already registered."
+
+
+def test_list_and_get_participant(db_session):
+    create_participant(ParticipantCreate(name="Ahmed", email="ahmed@example.com"), db_session)
+    create_participant(ParticipantCreate(name="Karim", email="karim@example.com"), db_session)
+
+    participants = list_participants(db_session)
+    assert len(participants) == 2
+
+    found = get_participant(participants[0].id, db_session)
+    assert found.name == "Ahmed"
+
+    with pytest.raises(HTTPException) as exc_info:
+        get_participant(9999, db_session)
+
+    assert exc_info.value.status_code == 404
+    assert exc_info.value.detail == "Participant not found."
+
+
+def test_delete_participant_success_and_missing(db_session):
+    created = create_participant(ParticipantCreate(name="Ahmed", email="ahmed@example.com"), db_session)
+
+    delete_participant(created.id, db_session)
+    assert db_session.query(Participant).filter(Participant.id == created.id).first() is None
+
+    with pytest.raises(HTTPException) as exc_info:
+        delete_participant(9999, db_session)
+
+    assert exc_info.value.status_code == 404
+    assert exc_info.value.detail == "Participant not found."
