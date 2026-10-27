@@ -13,6 +13,7 @@ from app.routers.events import (
     filter_events_by_title,
     get_event,
     list_events,
+    router,
     update_event,
 )
 from app.schemas import EventCreate, EventUpdate
@@ -53,6 +54,16 @@ def test_filter_events_by_title(prepopulated_event_store):
     assert results[0]["title"] == "Python Workshop"
 
 
+def test_filter_events_by_title_is_case_insensitive(prepopulated_event_store):
+    results = filter_events_by_title(
+        prepopulated_event_store,
+        "PyThOn",
+    )
+
+    assert len(results) == 1
+    assert results[0]["title"] == "Python Workshop"
+
+
 # -------------------------
 # Boundary value tests
 # اختبارات الحدود
@@ -76,6 +87,14 @@ def test_capacity_maximum(sample_event_dict):
     assert event.capacity == 10000
 
 
+def test_capacity_above_maximum_rejected(sample_event_dict):
+    data = sample_event_dict.copy()
+    data["capacity"] = 10001
+
+    with pytest.raises(ValidationError):
+        EventCreate(**data)
+
+
 def test_title_minimum_length(sample_event_dict):
     data = sample_event_dict.copy()
     data["title"] = "ABC"
@@ -83,6 +102,14 @@ def test_title_minimum_length(sample_event_dict):
     event = EventCreate(**data)
 
     assert len(event.title) == 3
+
+
+def test_title_below_minimum_length_rejected(sample_event_dict):
+    data = sample_event_dict.copy()
+    data["title"] = "AB"
+
+    with pytest.raises(ValidationError):
+        EventCreate(**data)
 
 
 # -------------------------
@@ -134,6 +161,24 @@ def test_create_event_rejects_past_date(db_session, sample_event_dict):
 
     assert exc_info.value.status_code == 400
     assert exc_info.value.detail == "Event date cannot be in the past."
+
+
+def test_create_event_accepts_today(db_session, sample_event_dict):
+    data = sample_event_dict.copy()
+    data["date"] = date.today().isoformat()
+
+    created = create_event(EventCreate(**data), db_session)
+
+    assert created.date == date.today()
+
+
+def test_event_router_configuration():
+    assert router.prefix == "/events"
+    assert router.tags == ["Events"]
+
+    paths = {route.path for route in router.routes}
+
+    assert paths == {"/events/", "/events/{event_id}"}
 
 
 def test_list_events_returns_all_and_filtered(db_session, sample_event_dict):
@@ -195,6 +240,23 @@ def test_update_event_success_and_error_cases(db_session, sample_event_dict):
         update_event(created.id, past_data, db_session)
     assert past.value.status_code == 400
     assert past.value.detail == "Event date cannot be in the past."
+
+
+def test_update_event_accepts_today(db_session, sample_event_dict):
+    created = create_event(EventCreate(**sample_event_dict), db_session)
+
+    updated = EventUpdate(
+        title="Today Updated",
+        description="Same-day update",
+        date=date.today(),
+        location="Bejaia",
+        capacity=25,
+    )
+
+    result = update_event(created.id, updated, db_session)
+
+    assert result.date == date.today()
+    assert result.location == "Bejaia"
 
 
 def test_delete_event_success_and_missing(db_session, sample_event_dict):

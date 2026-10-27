@@ -1,0 +1,87 @@
+<html><body><h1>app/routers/registrations.py</h1>Killed 27 out of 34 mutants<h2>Survived</h2>Survived mutation testing. These mutants show holes in your test suite.<h3>Mutant 171</h3><pre>--- app/routers/registrations.py
++++ app/routers/registrations.py
+@@ -7,7 +7,7 @@
+ 
+ 
+ router = APIRouter(
+-    prefix="/events",
++    prefix="XX/eventsXX",
+     tags=["Registrations"]
+ )
+ 
+</pre><h3>Mutant 172</h3><pre>--- app/routers/registrations.py
++++ app/routers/registrations.py
+@@ -8,7 +8,7 @@
+ 
+ router = APIRouter(
+     prefix="/events",
+-    tags=["Registrations"]
++    tags=["XXRegistrationsXX"]
+ )
+ 
+ 
+</pre><h3>Mutant 173</h3><pre>--- app/routers/registrations.py
++++ app/routers/registrations.py
+@@ -6,10 +6,7 @@
+ from ..schemas import Registration as RegistrationSchema
+ 
+ 
+-router = APIRouter(
+-    prefix="/events",
+-    tags=["Registrations"]
+-)
++router = None
+ 
+ 
+ @router.post(
+</pre><h3>Mutant 174</h3><pre>--- app/routers/registrations.py
++++ app/routers/registrations.py
+@@ -13,7 +13,7 @@
+ 
+ 
+ @router.post(
+-    "/{event_id}/register/{participant_id}",
++    "XX/{event_id}/register/{participant_id}XX",
+     response_model=RegistrationSchema,
+     status_code=status.HTTP_201_CREATED
+ )
+</pre><h3>Mutant 175</h3><pre>--- app/routers/registrations.py
++++ app/routers/registrations.py
+@@ -11,12 +11,6 @@
+     tags=["Registrations"]
+ )
+ 
+-
+-@router.post(
+-    "/{event_id}/register/{participant_id}",
+-    response_model=RegistrationSchema,
+-    status_code=status.HTTP_201_CREATED
+-)
+ def register_participant(
+     event_id: int,
+     participant_id: int,
+</pre><h3>Mutant 195</h3><pre>--- app/routers/registrations.py
++++ app/routers/registrations.py
+@@ -84,7 +84,7 @@
+ 
+ 
+ @router.get(
+-    "/{event_id}/participants"
++    "XX/{event_id}/participantsXX"
+ )
+ def list_event_participants(
+     event_id: int,
+</pre><h3>Mutant 196</h3><pre>--- app/routers/registrations.py
++++ app/routers/registrations.py
+@@ -82,10 +82,6 @@
+ 
+     return registration
+ 
+-
+-@router.get(
+-    "/{event_id}/participants"
+-)
+ def list_event_participants(
+     event_id: int,
+     db: Session = Depends(get_db)
+</pre></body></html>
