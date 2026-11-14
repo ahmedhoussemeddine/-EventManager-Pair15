@@ -3,15 +3,81 @@
 <head><title>Event Manager</title></head>
 <body>
   <h1>Event Manager UI</h1>
-  <button onclick="loadEvents()">Fetch Events</button>
+  <form onsubmit="createEvent(event)">
+    <label>
+      Title
+      <input name="title" minlength="3" maxlength="100" required>
+    </label>
+    <label>
+      Description
+      <input name="description">
+    </label>
+    <label>
+      Date
+      <input name="date" type="date" required>
+    </label>
+    <label>
+      Location
+      <input name="location" minlength="2" maxlength="100" required>
+    </label>
+    <label>
+      Capacity
+      <input name="capacity" type="number" min="1" max="10000" required>
+    </label>
+    <button type="submit">Create Event</button>
+  </form>
+  <button type="button" onclick="loadEvents()">Fetch Events</button>
+  <p id="status" role="status"></p>
   <ul id="eventList"></ul>
   <script>
     async function loadEvents() {
-      const res = await fetch('http://localhost:8000/events/');
-      const events = await res.json();
-      document.getElementById('eventList').innerHTML =
-        events.map(e => `<li>${e.title} - ${e.location}</li>`).join('');
+      const eventList = document.getElementById('eventList');
+
+      try {
+        const response = await fetch('/api/events/');
+        if (!response.ok) {
+          throw new Error(`Backend returned HTTP ${response.status}`);
+        }
+
+        const events = await response.json();
+        eventList.replaceChildren(...events.map(event => {
+          const item = document.createElement('li');
+          item.textContent = `${event.title} - ${event.location}`;
+          return item;
+        }));
+      } catch (error) {
+        document.getElementById('status').textContent =
+          `Unable to load events: ${error.message}`;
+      }
     }
+
+    async function createEvent(submission) {
+      submission.preventDefault();
+      const form = submission.currentTarget;
+      const event = Object.fromEntries(new FormData(form));
+      event.capacity = Number(event.capacity);
+
+      try {
+        const response = await fetch('/api/events/', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(event)
+        });
+        if (!response.ok) {
+          const error = await response.json();
+          throw new Error(error.detail || `Backend returned HTTP ${response.status}`);
+        }
+
+        form.reset();
+        document.getElementById('status').textContent = 'Event created.';
+        await loadEvents();
+      } catch (error) {
+        document.getElementById('status').textContent =
+          `Unable to create event: ${error.message}`;
+      }
+    }
+
+    loadEvents();
   </script>
 </body>
 </html>
