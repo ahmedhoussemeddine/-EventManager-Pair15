@@ -274,3 +274,58 @@ The API can be explored interactively through Swagger UI:
 ```text
 http://127.0.0.1:8000/docs
 ```
+
+## 11. Kubernetes Deployment (Lab 6)
+
+The manifests in `k8s/` deploy two backend replicas, two frontend replicas,
+and a persistent SQLite volume. The backend is available inside the cluster at
+`backend-service:8000`; the frontend is exposed at `http://localhost`.
+The frontend proxies API requests through `/api/events/`, so the browser does
+not need direct access to the internal backend service.
+
+Apply and inspect the Kubernetes resources with:
+
+```powershell
+kubectl apply -f k8s/
+kubectl get deployments,pods,services,pvc
+kubectl rollout status deployment/backend-deployment
+kubectl rollout status deployment/frontend-deployment
+```
+
+The frontend provides a form to create events and a list to fetch them again.
+The backend's SQLite database is stored on the `sqlite-pvc` claim mounted at
+`/data`.
+
+The GitHub Actions workflow builds and pushes both images on `main`, then
+deploys them through a self-hosted runner connected to the local Kubernetes
+cluster. Configure the repository secrets `DOCKERHUB_USERNAME` and
+`DOCKERHUB_TOKEN`, and register a self-hosted runner on a machine with
+`kubectl` access to the target cluster before enabling deployment.
+
+### Lab 6 Reflection
+
+**Q1.1 — Storage and state.** A PVC requests persistent storage independently
+of a pod's lifecycle. Kubernetes binds it to a PersistentVolume, so a
+replacement pod can mount the same SQLite file. A Docker Compose local volume
+is managed by the Docker host and is not scheduled or rebound by Kubernetes.
+
+**Q1.2 — Service abstraction.** A `ClusterIP` service gives the backend a
+stable cluster-internal address and DNS name without exposing it externally.
+A `LoadBalancer` service exposes the frontend outside the cluster, at
+`localhost` in this Docker Desktop setup.
+
+**Q2.1 — Health and reliability.** A liveness probe detects a stuck or failed
+container and can cause Kubernetes to restart it. A readiness probe controls
+whether a pod receives service traffic. During a rolling update, an unready
+replacement is not considered available, so the rollout waits instead of
+sending traffic to it.
+
+**Q3.1 — Security context.** `runAsNonRoot: true` prevents the container from
+starting as root, while `runAsUser: 1000` selects a predictable unprivileged
+UID. This supports least privilege and limits the impact of a compromised
+process; it does not replace other container and host security controls.
+
+**Q3.2 — Continuous deployment.** A self-hosted runner on the developer
+machine can use that machine's Docker Desktop Kubernetes context and
+credentials. A GitHub-hosted runner is outside the local network and cannot
+normally reach the developer's local cluster.
